@@ -1,0 +1,3 @@
+/Users/ChristopherChan/documents/Coding/ArmadilloImplemen/Dependencies/cnpy/CMakeFiles/example1.dir
+/Users/ChristopherChan/documents/Coding/ArmadilloImplemen/Dependencies/cnpy/CMakeFiles/cnpy-static.dir
+/Users/ChristopherChan/documents/Coding/ArmadilloImplemen/Dependencies/cnpy/CMakeFiles/cnpy.dir

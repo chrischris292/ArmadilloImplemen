@@ -10,10 +10,11 @@
 #define Sparse_Representation_h
 
 #include <iostream>
-#include "Dependencies/cnpy.h"
+#include <fstream>
+#include <string>
+#include "Dependencies/cnpy/cnpy.h"
 #include <cmath>
 #include <complex>
-#include <armadillo> //use macports to install
 #include <iomanip>
 #include "BigD.hpp"
 #include "Dependencies/Voigt.hpp"

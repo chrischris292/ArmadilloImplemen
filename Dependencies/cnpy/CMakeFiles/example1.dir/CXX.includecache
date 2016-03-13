@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/ChristopherChan/documents/Coding/ArmadilloImplemen/Dependencies/cnpy/cnpy.h
+string
+-
+stdexcept
+-
+sstream
+-
+vector
+-
+cstdio
+-
+typeinfo
+-
+iostream
+-
+cassert
+-
+zlib.h
+-
+map
+-
+
+/Users/ChristopherChan/documents/Coding/ArmadilloImplemen/Dependencies/cnpy/example1.cpp
+cnpy.h
+/Users/ChristopherChan/documents/Coding/ArmadilloImplemen/Dependencies/cnpy/cnpy.h
+complex
+-
+cstdlib
+-
+iostream
+-
+map
+-
+string
+-
+

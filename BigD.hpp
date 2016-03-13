@@ -10,7 +10,6 @@
 #define BigD_hpp
 
 #include <stdio.h>
-#include "Dependencies/Eigen/Eigen"
 #include <vector>
 #include "bigDTuple.hpp"
 using namespace std;
