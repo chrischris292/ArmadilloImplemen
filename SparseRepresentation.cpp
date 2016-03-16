@@ -1,4 +1,5 @@
 #include <iostream>
+#define ARMA_DONT_USE_WRAPPER
 #include <armadillo>
 #include "SparseRepresentation.h"
 using namespace std;
@@ -73,7 +74,7 @@ void Sparse_Representation::load_file () {
         
         start = std::clock();
         tuple<arma::vec,arma::vec> Dtuple =  sparse_basis(D,pdf0,np);
-        //std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
         
         
         arma::vec Dind = get<0>(Dtuple);
@@ -98,11 +99,17 @@ void Sparse_Representation::load_file () {
             index = arma::zeros<vec>(Dind.size());
         }
         bigD.array[k].sparse_ind = combine_int(index,Dind);
-        cout << "Sparse Result"<<ik<<endl;
+        string fileName = "sparseInd"+to_string(ik)+".txt";
         arma::vec sparseResult = combine_int(index,Dind);
-        for(int i = 0;i<sparseResult.n_elem;i++){
-            cout << setprecision(50)<<sparseResult[i]<<endl;
-        }
+        std::ofstream file(fileName);
+         if (file.is_open())
+         {
+            for(int i = 0;i<sparseResult.n_elem;i++){
+                file << setprecision(50)<<sparseResult[i]<<endl;
+            }
+         }
+         file.close();
+
         //D[:, [Dind]] = D[:, [arange(len(Dind))]]
         for(int i = 0;i<Dind.size();i++){
             D.col(Dind[i]) = D.col(i);
@@ -132,11 +139,13 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat& dictio
         std::clock_t start;
         start = std::clock();
 
-        arma::mat dictT= dictionary.t(); //
         //start = std::clock();
+        std::clock_t startMult;
+        startMult = std::clock();
 
-        arma::vec absVectorParam = arma::abs(dictT*res); //12.097 ms
-        //std::cout << "Time for "<<n_active<<" multiplication: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        arma::vec absVectorParam = arma::abs(dictionary.t()*res); //12.097 ms
+        std::cout << "Time for "<<n_active<<" multiplication: " << (std::clock() - startMult) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+
         std::clock_t start1;
         start1 = std::clock();
 
@@ -158,7 +167,7 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat& dictio
             //cout << "n_active: "<< n_active<<endl;
             //cout << "result shape:"<<result.n_rows << ","<<result.n_cols<<endl;
             //cout << "other shape:"<<L.row(n_active).head(n_active).n_rows << ","<<L.row(n_active).head(n_active).n_cols<<endl;
-            L.row(n_active).head(n_active) = result;
+            L.row(n_active).head(n_active) = dictionary.cols(0,n_active-1).t()*dictionary.col(lam);
             //cout << "finished: "<<L.row(n_active).head(n_active);
             //cout <<"ASSIGNED VARIABLE"<<endl;
             //sla.solve_triangular(L[:n_active, :n_active], L[n_active, :n_active], lower=True, overwrite_b=True)
@@ -221,8 +230,8 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat& dictio
         //res = query_vec - dot(dictionary[:, :n_active + 1], gamma)
         res = query_vec - (dictionary.cols(0,n_active)*gamma);
         //cout << "res" <<res.head(10)<<endl;
-        //std::cout << "Time for "<<n_active<<" shorter block: " << (std::clock() - start1) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
-        //std::cout << "Time for "<<n_active<<" Total: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        std::cout << "Time for "<<n_active<<" shorter block: " << (std::clock() - start1) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        std::cout << "Time for "<<n_active<<" Total: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
     }
 
     tuple<arma::vec,arma::vec> result(idxs.head(n_active),gamma);
