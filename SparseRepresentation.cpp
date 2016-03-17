@@ -40,8 +40,7 @@ void Sparse_Representation::load_file () {
     cnpy::NpyArray Dict;
     Dict= cnpy::npy_load("Data/dictionary.npy");
     double * loaded_Dict = reinterpret_cast<double*>(Dict.data);
-    
-    arma::mat D(Dict.shape[0],Dict.shape[1]);
+    arma::mat D(200,60000);
     int dictI= 0;
     for(int i = 0;i<Dict.shape[0];i++){
         for(int j = 0; j<Dict.shape[1];j++){
@@ -65,18 +64,15 @@ void Sparse_Representation::load_file () {
     arma::vec Dvalm;
     arma::vec index;
     //Python code does this in parallel. first doing this single threaded to ensure correctness'
+        std::clock_t    start;
+        start = std::clock();
+
     for(int ik = 0;ik<numGalaxy;ik++){
-        cout <<"IK: "<<ik<<endl;
         int k = s0 + ik;
         arma::vec  pdf0 = pdfs[ik];
         int np = Nsparse;
-        std::clock_t    start;
-        
-        start = std::clock();
-        tuple<arma::vec,arma::vec> Dtuple =  sparse_basis(D,pdf0,np);
-        std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
-        
-        
+        tuple<arma::vec,arma::vec> Dtuple =  sparse_basis(D,pdf0,np);        
+
         arma::vec Dind = get<0>(Dtuple);
         arma::vec Dval = get<1>(Dtuple);
         bigDTuple temp;
@@ -87,9 +83,9 @@ void Sparse_Representation::load_file () {
             double dval0 = Dval[0];
             // cout << Dval;
             //cout << Dval.max();
-            Dvalm = Dval/Dval.max();
-            Dvalm = Dvalm/Da;
-            index = roundEigenVec(Dvalm);
+            auto dividend =  Dval.max()*Da;
+            Dvalm = (Dval/dividend);
+            index = arma::round(Dvalm);
 
             int index0 = (int)round(dval0/Da);
             index[0] = index0;
@@ -98,7 +94,9 @@ void Sparse_Representation::load_file () {
         else{
             index = arma::zeros<vec>(Dind.size());
         }
+        
         bigD.array[k].sparse_ind = combine_int(index,Dind);
+        /*
         string fileName = "sparseInd"+to_string(ik)+".txt";
         arma::vec sparseResult = combine_int(index,Dind);
         std::ofstream file(fileName);
@@ -109,50 +107,63 @@ void Sparse_Representation::load_file () {
             }
          }
          file.close();
-
+        */
         //D[:, [Dind]] = D[:, [arange(len(Dind))]]
         for(int i = 0;i<Dind.size();i++){
             D.col(Dind[i]) = D.col(i);
         }
     }
+        std::cout << "Total Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+
 }
-tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat& dictionary,arma::vec query_vec,int n_basis, int tolerance){
+tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat &dictionary,arma::vec query_vec,int n_basis, int tolerance){
 
     arma::vec a_n(dictionary.n_cols);   //arma::zeros(dictionary.n_cols);
 
-    arma::mat temp = dictionary.t();
-
-    arma::vec alpha = temp*query_vec;
+    arma::vec alpha = dictionary.t()*query_vec;
     arma::vec res = query_vec;
     arma::vec idxs;
     arma::vec gamma;
     int n_active;
+
     idxs = arma::linspace(0,dictionary.n_cols-1,dictionary.n_cols);
     //cout << idxs;
     arma::mat L = arma::zeros<arma::mat>(n_basis,n_basis);
 
     L(0,0) = 1;
-
     for( n_active = 0;n_active<n_basis;n_active++){ //9.7ms,
         //abs(dot(dictionary.T, res))
         //cout << "n_active" << n_active<<endl;
+        /*
         std::clock_t start;
         start = std::clock();
+        std::clock_t startTemp;
+        startTemp = std::clock();
+        dictionary.t();
+        std::cout << "Time for "<<n_active<<" tranpose: " << (std::clock() - startTemp) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+
+        startTemp = std::clock();
+        auto temp = dictionary.t()*res;
+        std::cout << "Time for "<<n_active<<" multiplication: " << (std::clock() - startTemp) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+
+
+        startTemp = std::clock();
+        auto result111 = arma::abs(temp);
+        std::cout << "Time for "<<n_active<<" absolute value: " << (std::clock() - startTemp) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 
         //start = std::clock();
-        std::clock_t startMult;
-        startMult = std::clock();
+        startTemp = std::clock();
+        uword lam;
 
-        arma::vec absVectorParam = arma::abs(dictionary.t()*res); //12.097 ms
-        std::cout << "Time for "<<n_active<<" multiplication: " << (std::clock() - startMult) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        arma::abs(dictionary.t()*res).max(lam); //12.097 ms
+        std::cout << "Time for "<<n_active<<" totalFunction: " << (std::clock() - startTemp) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+
 
         std::clock_t start1;
-        start1 = std::clock();
-
+        start1 = std::clock();*/
         uword lam;
-        absVectorParam.max(lam);
+        arma::abs(dictionary.t()*res).max(lam); //12.097 ms
 
-        //cout << "Lam: "<<lam<<endl;
         //cout<< "5796: "<<absVectorParam[5796]<<endl;
         //cout<< "6036: "<<absVectorParam[6036]<<endl;
 
@@ -160,14 +171,11 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat& dictio
             //L[n_active, :n_active] = dot(dictionary[:, :n_active].T, dictionary[:, lam])
             //cout << "preresultA: "<<dictionary.cols(0,n_active-1).t();
             //cout << "preresultB: "<<dictionary.col(lam);
-
-            arma::mat result = dictionary.cols(0,n_active-1).t()*dictionary.col(lam);
-            result = result.t();//idk why...
             //cout << "Preresult: "<<result<<endl;
             //cout << "n_active: "<< n_active<<endl;
             //cout << "result shape:"<<result.n_rows << ","<<result.n_cols<<endl;
             //cout << "other shape:"<<L.row(n_active).head(n_active).n_rows << ","<<L.row(n_active).head(n_active).n_cols<<endl;
-            L.row(n_active).head(n_active) = dictionary.cols(0,n_active-1).t()*dictionary.col(lam);
+            L.row(n_active).head(n_active) = (dictionary.cols(0,n_active-1).t()*dictionary.col(lam)).t();
             //cout << "finished: "<<L.row(n_active).head(n_active);
             //cout <<"ASSIGNED VARIABLE"<<endl;
             //sla.solve_triangular(L[:n_active, :n_active], L[n_active, :n_active], lower=True, overwrite_b=True)
@@ -226,12 +234,11 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat& dictio
         //gamma = L.topLeftCorner(n_active+1, n_active+1).llt().solve(alpha.head(n_active+1));
         arma::vec y = arma::solve(L(span(0,n_active),span(0,n_active)),alpha(span(0,n_active)));
         gamma = arma::solve(L(span(0,n_active),span(0,n_active)).t(),y);
-        //cout << "Gamma: "<< gamma<<endl;
+
         //res = query_vec - dot(dictionary[:, :n_active + 1], gamma)
         res = query_vec - (dictionary.cols(0,n_active)*gamma);
-        //cout << "res" <<res.head(10)<<endl;
-        std::cout << "Time for "<<n_active<<" shorter block: " << (std::clock() - start1) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
-        std::cout << "Time for "<<n_active<<" Total: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        //std::cout << "Time for "<<n_active<<" shorter block: " << (std::clock() - start1) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        //std::cout << "Time for "<<n_active<<" Total: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
     }
 
     tuple<arma::vec,arma::vec> result(idxs.head(n_active),gamma);
