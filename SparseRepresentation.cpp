@@ -2,12 +2,14 @@
 #define ARMA_DONT_USE_WRAPPER
 #include <armadillo>
 #include "SparseRepresentation.h"
+#include <time.h>
+#include <chrono>
+
 using namespace std;
 using namespace arma;
-
+using namespace std::chrono;
 // Armadillo documentation is available at:
 // http://arma.sourceforge.net/docs.html
-
 
 void Sparse_Representation::load_file () {
     
@@ -64,14 +66,19 @@ void Sparse_Representation::load_file () {
     arma::vec Dvalm;
     arma::vec index;
     //Python code does this in parallel. first doing this single threaded to ensure correctness'
-        std::clock_t    start;
-        start = std::clock();
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     for(int ik = 0;ik<numGalaxy;ik++){
         int k = s0 + ik;
         arma::vec  pdf0 = pdfs[ik];
         int np = Nsparse;
-        tuple<arma::vec,arma::vec> Dtuple =  sparse_basis(D,pdf0,np);        
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        tuple<arma::vec,arma::vec> Dtuple =  sparse_basis(D,pdf0,np); 
+        high_resolution_clock::time_point t3 = high_resolution_clock::now();
+
+        auto duration = std::chrono::duration_cast<microseconds>( t3 - t2 ).count();
+
+        cout <<duration<<","<<setprecision(10);
 
         arma::vec Dind = get<0>(Dtuple);
         arma::vec Dval = get<1>(Dtuple);
@@ -86,7 +93,6 @@ void Sparse_Representation::load_file () {
             auto dividend =  Dval.max()*Da;
             Dvalm = (Dval/dividend);
             index = arma::round(Dvalm);
-
             int index0 = (int)round(dval0/Da);
             index[0] = index0;
 
@@ -94,7 +100,7 @@ void Sparse_Representation::load_file () {
         else{
             index = arma::zeros<vec>(Dind.size());
         }
-        
+          
         bigD.array[k].sparse_ind = combine_int(index,Dind);
         /*
         string fileName = "sparseInd"+to_string(ik)+".txt";
@@ -113,7 +119,11 @@ void Sparse_Representation::load_file () {
             D.col(Dind[i]) = D.col(i);
         }
     }
-        std::cout << "Total Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+        high_resolution_clock::time_point t4 = high_resolution_clock::now();
+
+        auto duration = chrono::duration_cast<microseconds>( t4 - t1 ).count();
+
+        cout << "Total: "<<duration<<endl;
 
 }
 tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat &dictionary,arma::vec query_vec,int n_basis, int tolerance){
@@ -134,7 +144,7 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat &dictio
     for( n_active = 0;n_active<n_basis;n_active++){ //9.7ms,
         //abs(dot(dictionary.T, res))
         //cout << "n_active" << n_active<<endl;
-        /*
+        uword lam;/*
         std::clock_t start;
         start = std::clock();
         std::clock_t startTemp;
@@ -148,21 +158,29 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat &dictio
 
 
         startTemp = std::clock();
-        auto result111 = arma::abs(temp);
+        auto result111 = arma::abs(dictionary.t()*res);
         std::cout << "Time for "<<n_active<<" absolute value: " << (std::clock() - startTemp) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 
         //start = std::clock();
         startTemp = std::clock();
-        uword lam;
 
         arma::abs(dictionary.t()*res).max(lam); //12.097 ms
         std::cout << "Time for "<<n_active<<" totalFunction: " << (std::clock() - startTemp) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 
 
         std::clock_t start1;
-        start1 = std::clock();*/
-        uword lam;
-        arma::abs(dictionary.t()*res).max(lam); //12.097 ms
+        start1 = std::clock();
+*/
+       // high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        arma::abs(dictionary.t()*res).max(lam); 
+       // high_resolution_clock::time_point t3 = high_resolution_clock::now();
+
+        //auto duration = std::chrono::duration_cast<microseconds>( t3 - t2 ).count();
+
+        //cout << "abs: "<<duration<<endl;
+
+        //lam = argMax(dictionary.t()*res); //12.097 ms
+        //std::cout << "Time for "<<n_active<<" multiplication: " << (std::clock() - start1) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 
         //cout<< "5796: "<<absVectorParam[5796]<<endl;
         //cout<< "6036: "<<absVectorParam[6036]<<endl;
@@ -242,6 +260,7 @@ tuple<arma::vec,arma::vec> Sparse_Representation::sparse_basis(arma::mat &dictio
     }
 
     tuple<arma::vec,arma::vec> result(idxs.head(n_active),gamma);
+
     //cout <<"idxs"<< idxs.head(n_active)<<endl; 
     //cout <<"gamma: " <<gamma<<endl;
     return result;
@@ -253,6 +272,15 @@ void Sparse_Representation::swapVectorVar(arma::vec &input, int one, int two){
     input[two] = temp;
 }
 
+int Sparse_Representation::argMax(const arma::vec & input){
+    int maxIndice = 0;
+    for(int i = 0;i<input.size();i++){
+        if(abs(input[maxIndice])<abs(input[i])){
+            maxIndice = i;
+        }
+    }
+    return maxIndice;
+}
 
 arma::vec Sparse_Representation::combine_int(arma::vec index, arma::vec dind){
     arma::vec result(index.size());
@@ -270,6 +298,19 @@ arma::vec Sparse_Representation::roundEigenVec(arma::vec & input){
     }
     return returnVal;
 }
+/*
+arma::vec Sparse_Representation::reconstruct_pdf_int(long index, Header header, cut = 1.e-5){
+    Vals =  arma::linspace<vec>(0,1,Ncoef);
+    dVals = Vals[1]-Vals[0];
+    //sp_ind = 
+}
+
+int Sparse_Representation::get_Ncoef(int longn){
+    return (longn>>16);
+}
+int Sparse_Representation::getNbase(int longn){
+    return (longn & (pow(2,16)-1));
+}*/
 
 int
 main(int argc, char** argv)

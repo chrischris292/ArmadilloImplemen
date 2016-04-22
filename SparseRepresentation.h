@@ -18,6 +18,7 @@
 #include <iomanip>
 #include "BigD.hpp"
 #include "Dependencies/Voigt.hpp"
+//#include "Header.h"
 
 using namespace std;
 
@@ -30,6 +31,7 @@ public:
     arma::mat create_voigt_dict(vector<double> &zfine, tuple<double,double> mu, int Nmu, tuple<double,double> sigma, int Nsigma, int Nv,double cut = 1.e-5);
     tuple<arma::vec,arma::vec> sparse_basis(arma::mat& dictionary,arma::vec query_vec,int n_basis, int tolerance = 0);
     double normUnsquared(arma::vec& input);
+
 private:
     string fname = "Data/CFHTLens_sample.P.npy";
     vector<arma::vec >pdfs;
@@ -39,6 +41,9 @@ private:
     void swapVectorVar(arma::vec &input, int one, int two);
     arma::vec roundEigenVec(arma::vec &input);
     arma::vec combine_int(arma::vec index, arma::vec dind);
+    int get_Ncoef(int longn);
+    int getNbase(int longn);
+
 };
 Sparse_Representation::Sparse_Representation(){
     //load_file();
